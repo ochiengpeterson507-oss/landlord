@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Properties - LandlordPro</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <style>
+        /* Additional property-specific styles */
+        .property-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .property-status.available {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .property-status.rented {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .property-status.maintenance {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        .property-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .property-card {
+            background: white;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .property-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .property-image {
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+        .property-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .property-image-placeholder {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .property-status-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .property-details {
+            padding: 1.5rem;
+        }
+        .property-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #0f172a;
+        }
+        .property-address {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .property-specs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem 0;
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .property-spec {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+        .property-rent {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+        }
+        .property-rent span {
+            font-size: 0.9rem;
+            font-weight: normal;
+            color: #64748b;
+        }
+        .property-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .property-action-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+        .property-action-btn.view {
+            background: #64748b;
+            color: white;
+        }
+        .property-action-btn.edit {
+            background: #3b82f6;
+            color: white;
+        }
+        .property-action-btn.delete {
+            background: #ef4444;
+            color: white;
+        }
+        .property-action-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(110%);
+        }
+        .property-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .property-stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .property-stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .property-stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .image-preview {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+        .image-preview-item {
+            width: 60px;
+            height: 60px;
+            border-radius: 0.375rem;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+        }
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .image-upload-area {
+            border: 2px dashed #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .image-upload-area:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+    </style>
+</head>
+<body class="dashboard-body">
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🏠 LandlordPro</h2>
+                <button class="sidebar-close" onclick="toggleSidebar()">✕</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html">📊 Dashboard</a>
+                <a href="properties.html" class="active">🏢 Properties</a>
+                <a href="tenants.html">👥 Tenants</a>
+                <a href="payments.html">💰 Payments</a>
+                <a href="maintenance.html">🔧 Maintenance</a>
+                <a href="#reports">📊 Reports</a>
+                <a href="#settings">⚙️ Settings</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">👤</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Loading...</span>
+                        <span class="user-email" id="userEmail"></span>
+                    </div>
+                </div>
+                <button class="logout-btn" id="logoutBtn">🚪 Logout</button>
+            </div>
+        </aside>
+
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+
+        <main class="main-content">
+            <header class="dashboard-header">
+                <h1>Properties</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openPropertyModal()">
+                        + Add Property
+                    </button>
+                </div>
+            </header>
+
+            <!-- Property Statistics -->
+            <div class="property-stats" id="property-stats">
+                <div class="property-stat-card">
+                    <div class="property-stat-value" id="total-properties">0</div>
+                    <div class="property-stat-label">Total Properties</div>
+                </div>
+                <div class="property-stat-card">
+                    <div class="property-stat-value" id="available-properties">0</div>
+                    <div class="property-stat-label">Available</div>
+                </div>
+                <div class="property-stat-card">
+                    <div class="property-stat-value" id="rented-properties">0</div>
+                    <div class="property-stat-label">Rented</div>
+                </div>
+                <div class="property-stat-card">
+                    <div class="property-stat-value" id="total-property-value">$0</div>
+                    <div class="property-stat-label">Total Value</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-bar">
+                <div class="search-box">
+                    <input type="text" id="search-property" placeholder="Search properties by name or address..." onkeyup="filterProperties()">
+                </div>
+                <div class="filter-options">
+                    <select id="status-filter" onchange="filterProperties()">
+                        <option value="all">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="rented">Rented</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                    <select id="type-filter" onchange="filterProperties()">
+                        <option value="all">All Types</option>
+                        <option value="apartment">Apartment</option>
+                        <option value="house">House</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="condo">Condo</option>
+                        <option value="townhouse">Townhouse</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Properties Grid -->
+            <div id="properties-grid" class="property-grid">
+                <div class="loading">Loading properties...</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Property Modal -->
+    <div class="modal" id="property-modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="property-modal-title">Add Property</h3>
+                <button class="modal-close" onclick="closePropertyModal()">✕</button>
+            </div>
+            <form id="property-form">
+                <input type="hidden" id="property-id">
+                
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="property-name">Property Name *</label>
+                        <input type="text" id="property-name" required placeholder="e.g., Sunset Apartments">
+                    </div>
+                    <div class="form-group half">
+                        <label for="property-type">Property Type *</label>
+                        <select id="property-type" required>
+                            <option value="">Select type</option>
+                            <option value="apartment">Apartment</option>
+                            <option value="house">House</option>
+                            <option value="commercial">Commercial</option>
+                            <option value="condo">Condo</option>
+                            <option value="townhouse">Townhouse</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="property-address">Street Address *</label>
+                    <input type="text" id="property-address" required placeholder="123 Main St">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group third">
+                        <label for="property-city">City *</label>
+                        <input type="text" id="property-city" required placeholder="Los Angeles">
+                    </div>
+                    <div class="form-group third">
+                        <label for="property-state">State *</label>
+                        <input type="text" id="property-state" required placeholder="CA" maxlength="2">
+                    </div>
+                    <div class="form-group third">
+                        <label for="property-zip">ZIP Code *</label>
+                        <input type="text" id="property-zip" required placeholder="90001">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group quarter">
+                        <label for="property-bedrooms">Bedrooms</label>
+                        <input type="number" id="property-bedrooms" min="0" placeholder="2">
+                    </div>
+                    <div class="form-group quarter">
+                        <label for="property-bathrooms">Bathrooms</label>
+                        <input type="number" id="property-bathrooms" min="0" step="0.5" placeholder="1.5">
+                    </div>
+                    <div class="form-group quarter">
+                        <label for="property-sqft">Square Feet</label>
+                        <input type="number" id="property-sqft" min="0" placeholder="950">
+                    </div>
+                    <div class="form-group quarter">
+                        <label for="property-year">Year Built</label>
+                        <input type="number" id="property-year" min="1800" max="2026" placeholder="2005">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="property-purchase-price">Purchase Price ($)</label>
+                        <input type="number" id="property-purchase-price" min="0" step="1000" placeholder="350000">
+                    </div>
+                    <div class="form-group half">
+                        <label for="property-current-value">Current Value ($)</label>
+                        <input type="number" id="property-current-value" min="0" step="1000" placeholder="400000">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="property-monthly-rent">Monthly Rent ($) *</label>
+                        <input type="number" id="property-monthly-rent" min="0" step="100" required placeholder="2500">
+                    </div>
+                    <div class="form-group half">
+                        <label for="property-status">Status *</label>
+                        <select id="property-status" required>
+                            <option value="available">Available</option>
+                            <option value="rented">Rented</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="property-description">Description</label>
+                    <textarea id="property-description" rows="3" placeholder="Describe the property, features, amenities..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Property Images</label>
+                    <div class="image-upload-area" onclick="document.getElementById('property-images').click()">
+                        📸 Click to upload images (URLs)
+                    </div>
+                    <input type="file" id="property-images" style="display: none;" multiple accept="image/*" onchange="handleImageUpload()">
+                    <div id="image-preview" class="image-preview"></div>
+                    <textarea id="property-images-urls" rows="2" placeholder="Or enter image URLs directly (one per line)" style="margin-top: 0.5rem;"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closePropertyModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="save-property-btn">
+                        <span class="btn-text">Save Property</span>
+                        <span class="btn-loader" style="display: none;">⏳</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Property Modal -->
+    <div class="modal" id="view-property-modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="view-property-name">Property Details</h3>
+                <button class="modal-close" onclick="closeViewPropertyModal()">✕</button>
+            </div>
+            <div id="property-details-content">
+                <!-- Property details will be loaded here -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeViewPropertyModal()">Close</button>
+                <button class="btn btn-primary" onclick="editPropertyFromView()">Edit</button>
+                <button class="btn btn-success" onclick="viewTenants()">View Tenants</button>
+                <button class="btn btn-danger" onclick="deletePropertyFromView()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal" id="delete-modal">
+        <div class="modal-content">
+            <h3>Delete Property</h3>
+            <p id="delete-message">Are you sure you want to delete this property? This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirm-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tenants List Modal -->
+    <div class="modal" id="tenants-modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3>Tenants in this Property</h3>
+                <button class="modal-close" onclick="closeTenantsModal()">✕</button>
+            </div>
+            <div id="tenants-list-content">
+                <!-- Tenants list will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="properties.js"></script>
+</body>
+</html>

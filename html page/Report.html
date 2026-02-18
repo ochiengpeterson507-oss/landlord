@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - LandlordPro</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="supabase-config.js"></script>
+    <style>
+        /* Reports-specific styles */
+        .reports-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .report-period {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .report-period select, .report-period input {
+            padding: 0.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+        }
+        .report-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .report-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .report-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .report-card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .report-card-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+        .report-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .report-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+        .report-card-change {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .change-positive {
+            color: #10b981;
+        }
+        .change-negative {
+            color: #ef4444;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .chart-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .chart-actions button {
+            padding: 0.25rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chart-actions button:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+        .chart-actions button.active {
+            background: #0f172a;
+            color: white;
+            border-color: #0f172a;
+        }
+        .reports-table {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .reports-table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .reports-table-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .export-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        .export-btn:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .summary-table th {
+            text-align: left;
+            padding: 0.75rem;
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .summary-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .summary-table tr:last-child td {
+            border-bottom: none;
+        }
+        .summary-table tfoot td {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+        .report-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+        }
+        .report-tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1rem;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .report-tab:hover {
+            color: #0f172a;
+        }
+        .report-tab.active {
+            color: #0f172a;
+            border-bottom-color: #0f172a;
+            font-weight: 600;
+        }
+        .report-section {
+            display: none;
+        }
+        .report-section.active {
+            display: block;
+        }
+        .date-range {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            background: white;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .date-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .date-input-group label {
+            font-weight: 500;
+            color: #475569;
+        }
+        .date-input-group input {
+            padding: 0.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+        }
+        .apply-btn {
+            padding: 0.5rem 1.5rem;
+            background: #0f172a;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .apply-btn:hover {
+            background: #1e293b;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .kpi-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .kpi-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .property-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .property-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .property-item:last-child {
+            border-bottom: none;
+        }
+        .property-info h4 {
+            margin-bottom: 0.25rem;
+        }
+        .property-info p {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .property-stats {
+            text-align: right;
+        }
+        .property-rent {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .property-occupancy {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+        .tax-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            margin-bottom: 2rem;
+        }
+        .tax-year {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+        .tax-amount {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .tax-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .tax-detail-item {
+            text-align: center;
+        }
+        .tax-detail-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 0.25rem;
+        }
+        .tax-detail-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="dashboard-body">
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🏠 LandlordPro</h2>
+                <button class="sidebar-close" onclick="toggleSidebar()">✕</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html">📊 Dashboard</a>
+                <a href="properties.html">🏢 Properties</a>
+                <a href="tenants.html">👥 Tenants</a>
+                <a href="payments.html">💰 Payments</a>
+                <a href="maintenance.html">🔧 Maintenance</a>
+                <a href="reports.html" class="active">📊 Reports</a>
+                <a href="settings.html">⚙️ Settings</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">👤</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Loading...</span>
+                        <span class="user-email" id="userEmail"></span>
+                    </div>
+                </div>
+                <button class="logout-btn" id="logoutBtn">🚪 Logout</button>
+            </div>
+        </aside>
+
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+
+        <main class="main-content">
+            <div class="reports-header">
+                <h1>Financial Reports & Analytics</h1>
+                <div class="report-period">
+                    <select id="year-select">
+                        <option value="2026">2026</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Report Tabs -->
+            <div class="report-tabs">
+                <button class="report-tab active" onclick="switchReportTab('overview')">Overview</button>
+                <button class="report-tab" onclick="switchReportTab('income')">Income</button>
+                <button class="report-tab" onclick="switchReportTab('expenses')">Expenses</button>
+                <button class="report-tab" onclick="switchReportTab('tax')">Tax Summary</button>
+                <button class="report-tab" onclick="switchReportTab('properties')">By Property</button>
+            </div>
+
+            <!-- Overview Section -->
+            <div id="overview-section" class="report-section active">
+                <!-- KPI Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="total-revenue">$0</div>
+                        <div class="kpi-label">Total Revenue</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="total-expenses">$0</div>
+                        <div class="kpi-label">Total Expenses</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="net-income">$0</div>
+                        <div class="kpi-label">Net Income</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="profit-margin">0%</div>
+                        <div class="kpi-label">Profit Margin</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <span class="chart-title">Monthly Income vs Expenses</span>
+                            <div class="chart-actions">
+                                <button class="active" onclick="updateIncomeChart('month')">Month</button>
+                                <button onclick="updateIncomeChart('quarter')">Quarter</button>
+                                <button onclick="updateIncomeChart('year')">Year</button>
+                            </div>
+                        </div>
+                        <canvas id="income-expense-chart" height="300"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <span class="chart-title">Income Breakdown</span>
+                        </div>
+                        <canvas id="income-breakdown-chart" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="reports-table">
+                    <div class="reports-table-header">
+                        <span class="reports-table-title">Recent Transactions</span>
+                        <div class="export-buttons">
+                            <button class="export-btn" onclick="exportToCSV()">
+                                📥 Export CSV
+                            </button>
+                            <button class="export-btn" onclick="exportToPDF()">
+                                📄 Export PDF
+                            </button>
+                        </div>
+                    </div>
+                    <table class="summary-table" id="recent-transactions">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Property</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="loading">Loading transactions...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Income Section -->
+            <div id="income-section" class="report-section">
+                <div class="date-range">
+                    <div class="date-input-group">
+                        <label>From:</label>
+                        <input type="date" id="income-start-date">
+                    </div>
+                    <div class="date-input-group">
+                        <label>To:</label>
+                        <input type="date" id="income-end-date">
+                    </div>
+                    <button class="apply-btn" onclick="loadIncomeReport()">Apply</button>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="rental-income">$0</div>
+                        <div class="kpi-label">Rental Income</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="late-fees">$0</div>
+                        <div class="kpi-label">Late Fees</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="deposits">$0</div>
+                        <div class="kpi-label">Security Deposits</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="other-income">$0</div>
+                        <div class="kpi-label">Other Income</div>
+                    </div>
+                </div>
+
+                <div class="reports-table">
+                    <div class="reports-table-header">
+                        <span class="reports-table-title">Income Details</span>
+                    </div>
+                    <table class="summary-table" id="income-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Tenant</th>
+                                <th>Property</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="loading">Loading income data...</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4"><strong>Total</strong></td>
+                                <td id="income-total">$0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Expenses Section -->
+            <div id="expenses-section" class="report-section">
+                <div class="date-range">
+                    <div class="date-input-group">
+                        <label>From:</label>
+                        <input type="date" id="expense-start-date">
+                    </div>
+                    <div class="date-input-group">
+                        <label>To:</label>
+                        <input type="date" id="expense-end-date">
+                    </div>
+                    <button class="apply-btn" onclick="loadExpenseReport()">Apply</button>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <span class="chart-title">Expense Categories</span>
+                        </div>
+                        <canvas id="expense-category-chart" height="300"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <span class="chart-title">Monthly Expenses</span>
+                        </div>
+                        <canvas id="monthly-expense-chart" height="300"></canvas>
+                    </div>
+                </div>
+
+                <div class="reports-table">
+                    <div class="reports-table-header">
+                        <span class="reports-table-title">Expense Details</span>
+                    </div>
+                    <table class="summary-table" id="expense-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Property</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="loading">Loading expense data...</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4"><strong>Total</strong></td>
+                                <td id="expense-total">$0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tax Summary Section -->
+            <div id="tax-section" class="report-section">
+                <div class="tax-summary">
+                    <div class="tax-year">Tax Year 2026</div>
+                    <div class="tax-amount" id="taxable-income">$0</div>
+                    <div>Estimated Taxable Income</div>
+                    <div class="tax-details">
+                        <div class="tax-detail-item">
+                            <div class="tax-detail-label">Total Income</div>
+                            <div class="tax-detail-value" id="tax-total-income">$0</div>
+                        </div>
+                        <div class="tax-detail-item">
+                            <div class="tax-detail-label">Total Deductions</div>
+                            <div class="tax-detail-value" id="tax-total-deductions">$0</div>
+                        </div>
+                        <div class="tax-detail-item">
+                            <div class="tax-detail-label">Net Income</div>
+                            <div class="tax-detail-value" id="tax-net-income">$0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reports-table">
+                    <div class="reports-table-header">
+                        <span class="reports-table-title">Deductible Expenses</span>
+                    </div>
+                    <table class="summary-table" id="tax-deductions-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tax-deductions-body">
+                            <tr>
+                                <td colspan="3" class="loading">Loading tax data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- By Property Section -->
+            <div id="properties-section" class="report-section">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="total-properties">0</div>
+                        <div class="kpi-label">Total Properties</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="occupied-properties">0</div>
+                        <div class="kpi-label">Occupied</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="vacant-properties">0</div>
+                        <div class="kpi-label">Vacant</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="occupancy-rate">0%</div>
+                        <div class="kpi-label">Occupancy Rate</div>
+                    </div>
+                </div>
+
+                <div class="property-list" id="property-performance-list">
+                    <!-- Property items will be loaded here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="reports.js"></script>
+</body>
+</html>
